@@ -1,0 +1,106 @@
+services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/certs:/etc/nginx/certs  # Mount SSL certificates
+      - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
+      - ./sites/backend/public:/var/www/html/backend/public
+      - ./sites/frontend/public:/var/www/html/frontend/public
+      #- public-build:/var/www/html/frontend/public/build
+    depends_on:
+      - php-fpm-backend
+      - php-fpm-frontend
+      - php-fpm-product
+    networks:
+      app-network:
+        aliases:
+          - backend
+          - frontend
+          - product
+
+  php-fpm-backend:
+    build: 
+      context: .
+      dockerfile: ./sites/backend/Dockerfile
+    ports:
+      - "9001:9000"
+    volumes:
+      - ./sites/backend:/var/www/html/backend
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - app-network
+
+  php-fpm-frontend:
+    env_file:
+      - ./sites/frontend/.env.local
+      #- ./sites/frontend/.env.production
+    build: 
+      context: .
+      dockerfile: ./sites/frontend/Dockerfile
+    ports:
+      - "9002:9000"
+      - "5173:5173"
+    volumes:
+      - ./sites/frontend:/var/www/html/frontend
+      - node_modules_frontend:/var/www/html/frontend/node_modules
+      - ./nginx/certs:/etc/nginx/certs
+      #- public-build:/var/www/html/frontend/public/build
+    depends_on:
+      - redis
+    networks:
+      - app-network
+
+  
+  php-fpm-product:
+    build: ./sites/product
+    ports:
+      - "9003:9000"
+    volumes:
+      - ./sites/product:/app
+      - ./scripts/wait-for-mysql.sh:/wait-for-mysql.sh
+    depends_on:
+      - mysql
+      - redis
+    command: bash -c "chmod +x /wait-for-mysql.sh && /wait-for-mysql.sh ./main"
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+    ports:
+      - "3306:3306" # Remove in production
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      app-network:
+        aliases:
+          - frontend
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379" # Remove in production
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/etc/redis/redis.conf
+    networks:
+      - app-network
+
+volumes:
+  mysql_data:
+  redis_data:
+  node_modules_frontend:
+  #public-build:
+
+networks:
+  app-network:
+    driver: bridge
+    name: app-network
