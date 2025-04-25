@@ -16,7 +16,7 @@ Envo2 Public is a proof-of-concept multi-container environment that orchestrates
   - `php-fpm-frontend` (PHP)
   - `php-fpm-product` (Go)
 - **Database**: MySQL 8.0 with initial schemas and users.
-- **Caching**: Redis for caching.
+- **Caching**: Redis for caching - Still to be added.
 - **Startup Ordering**: A `wait-for-mysql.sh` script ensures services start after MySQL.
 - **Environment Variables**: Frontend supports `.env.local` for configuration.
 - **Frontend Tech**: React, Tailwind CSS, and Inertia.js for the frontend UI.
