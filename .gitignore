@@ -1,0 +1,2 @@
+# Local SSL private keys
+/nginx/certs/*.key
